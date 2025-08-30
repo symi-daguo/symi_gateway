@@ -1,0 +1,8 @@
+{
+  "name": "亖米Mesh网关",
+  "content_in_root": false,
+  "filename": "symi_gateway",
+  "country": ["CN"],
+  "render_readme": true,
+  "domains": ["switch", "light", "cover", "sensor", "binary_sensor", "climate"]
+}

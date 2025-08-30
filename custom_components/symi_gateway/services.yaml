@@ -1,0 +1,19 @@
+start_scan:
+  name: 开始设备扫描
+  description: 开始扫描附近的亖米设备进行配网
+  fields: {}
+
+stop_scan:
+  name: 停止设备扫描
+  description: 停止设备扫描模式
+  fields: {}
+
+factory_reset:
+  name: 恢复出厂设置
+  description: 将网关恢复到出厂设置，清除所有配置和设备
+  fields: {}
+
+reboot_gateway:
+  name: 重启网关
+  description: 重启亖米网关设备
+  fields: {}

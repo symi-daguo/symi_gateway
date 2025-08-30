@@ -1,0 +1,96 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "亖米Mesh网关",
+        "description": "选择配置方式",
+        "data": {
+          "setup_type": "配置方式"
+        }
+      },
+      "discovery": {
+        "title": "发现网关",
+        "description": "在局域网中发现了 {count} 个亖米网关，请选择要配置的网关",
+        "data": {
+          "gateway": "选择网关"
+        }
+      },
+      "connection_type": {
+        "title": "亖米Mesh网关",
+        "description": "选择连接网关的方式",
+        "data": {
+          "connection_type": "连接方式"
+        },
+        "data_description": {
+          "connection_type": "选择连接网关的方式：串口连接或TCP网络连接"
+        }
+      },
+      "serial": {
+        "title": "串口连接配置",
+        "description": "配置串口连接参数",
+        "data": {
+          "serial_port": "串口路径",
+          "baudrate": "波特率"
+        },
+        "data_description": {
+          "serial_port": "连接亖米网关的串口路径，如 /dev/ttyUSB0 或 COM3",
+          "baudrate": "串口通信波特率，通常为115200"
+        }
+      },
+      "tcp": {
+        "title": "TCP网络连接配置",
+        "description": "配置TCP网络连接参数",
+        "data": {
+          "tcp_host": "IP地址",
+          "tcp_port": "端口号"
+        },
+        "data_description": {
+          "tcp_host": "亖米网关的IP地址，如 192.168.1.100",
+          "tcp_port": "TCP端口号，通常为8899"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "无法连接到指定的设备，请检查连接参数和设备状态",
+      "unknown": "发生未知错误，请查看日志获取详细信息",
+      "no_gateways_found": "未发现任何亖米网关，请确保网关已连接到同一局域网",
+      "discovery_failed": "自动发现失败，请尝试手动配置"
+    },
+    "abort": {
+      "already_configured": "该设备已经配置过，请选择其他设备或删除现有配置"
+    },
+    "options": {
+      "step": {
+        "init": {
+          "title": "重新配置亖米Mesh网关",
+          "description": "修改网关连接参数",
+          "data": {
+            "serial_port": "串口路径",
+            "baudrate": "波特率",
+            "tcp_host": "IP地址",
+            "tcp_port": "端口号",
+            "enable_debug": "启用调试模式"
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "start_scan": {
+      "name": "开始设备扫描",
+      "description": "开始扫描附近的Symi设备进行配网"
+    },
+    "stop_scan": {
+      "name": "停止设备扫描", 
+      "description": "停止设备扫描模式"
+    },
+    "factory_reset": {
+      "name": "恢复出厂设置",
+      "description": "将网关恢复到出厂设置，清除所有配置和设备"
+    },
+    "reboot_gateway": {
+      "name": "重启网关",
+      "description": "重启Symi网关设备"
+    }
+  }
+}

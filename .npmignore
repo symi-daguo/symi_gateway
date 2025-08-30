@@ -1,0 +1,54 @@
+# Development files
+.git/
+.gitignore
+.vscode/
+.idea/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test files
+test/
+tests/
+*.test.js
+*.spec.js
+coverage/
+nodered-test/
+.node-red-local/
+
+# Documentation source
+docs/
+*.md.backup
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# IDE files
+*.swp
+*.swo
+*~
+
+# Build artifacts
+dist/
+build/
+.nyc_output/
+
+# Package files
+*.tgz
+*.tar.gz
+
+# Development scripts
+package_and_commit.js
+verify_install.js
