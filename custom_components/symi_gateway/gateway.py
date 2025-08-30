@@ -116,7 +116,7 @@ class SymiGateway:
                 self._handle_stop_scan_response(frame)
             elif frame.opcode == OP_RESP_ADD_DEVICE:
                 self._handle_add_device_response(frame)
-            elif frame.opcode == OP_RESP_READ_DEVICE_LIST:
+            elif frame.opcode == OP_RESP_READ_DEVICE_LIST or frame.opcode == OP_RESP_DEVICE_LIST:
                 self._handle_device_list_response(frame)
             elif frame.opcode == OP_RESP_READ_SOFTWARE_VERSION:
                 self._handle_software_version_response(frame)

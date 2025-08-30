@@ -10,7 +10,7 @@
   "platforms": ["switch", "light", "cover", "sensor", "binary_sensor", "climate", "button"],
   "issue_tracker": "https://github.com/symi/symi-gateway-ha/issues",
   "requirements": ["pyserial>=3.5"],
-  "version": "4.5.0",
+  "version": "4.6.0",
   "after_dependencies": [],
   "bluetooth": false,
   "dhcp": false,

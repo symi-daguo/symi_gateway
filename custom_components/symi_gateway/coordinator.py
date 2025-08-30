@@ -159,10 +159,24 @@ class SymiGatewayCoordinator(DataUpdateCoordinator):
         # Read gateway information
         await self.gateway.read_gateway_info()
 
+        # Read device list from gateway to get all current devices
+        _LOGGER.info("📋 Reading device list from gateway...")
+        await self.gateway.async_read_device_list()
+
+        # Wait a moment for device list response to be processed
+        await asyncio.sleep(2)
+
+        # Update discovered devices cache from device manager
+        if self.gateway.device_manager:
+            for device in self.gateway.device_manager.get_all_devices():
+                self.discovered_devices[device.unique_id] = device
+                _LOGGER.info("📱 Loaded device: %s (Type: %d, Capabilities: %s)",
+                           device.name, device.device_type, device.capabilities)
+
         # Trigger initial data update to create entities for loaded devices
         await self.async_refresh()
 
-        _LOGGER.info("✅ Gateway setup completed")
+        _LOGGER.info("✅ Gateway setup completed with %d devices", len(self.discovered_devices))
     
     async def _async_load_devices(self) -> None:
         """Load devices from storage."""

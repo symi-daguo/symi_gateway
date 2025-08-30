@@ -47,10 +47,6 @@ async def async_setup_entry(
     """Set up Symi Gateway switch entities."""
     coordinator: SymiGatewayCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-    # Store the add_entities callback for dynamic entity creation
-    coordinator._switch_add_entities = async_add_entities
-    coordinator._created_switch_entities = set()
-
     entities = []
 
     # Always add gateway management switches
@@ -58,79 +54,25 @@ async def async_setup_entry(
     entities.append(SymiDebugLogSwitch(coordinator))
     _LOGGER.info("🔄 Added gateway management switches")
 
-    # Add device switches from gateway device manager
-    if coordinator.gateway and coordinator.gateway.device_manager:
-        for device in coordinator.gateway.device_manager.get_all_devices():
-            if "switch" in device.capabilities:
-                _LOGGER.warning("🔌 Creating switch entities for device: %s (%d channels)", device.name, device.channels)
-                device_entities = _create_switch_entities_for_device(coordinator, device)
-                entities.extend(device_entities)
+    # Add device switches from discovered devices
+    for device in coordinator.discovered_devices.values():
+        if "switch" in device.capabilities:
+            _LOGGER.warning("🔌 Creating switch entities for device: %s (%d channels)", device.name, device.channels)
+            if device.channels == 1:
+                # Single channel switch
+                entities.append(SymiDeviceSwitch(coordinator, device))
+                _LOGGER.warning("✅ Created single channel switch: %s", device.name)
+            else:
+                # Multi-channel switch - create individual switches for each channel
+                for channel in range(1, device.channels + 1):
+                    entities.append(SymiDeviceSwitch(coordinator, device, channel))
+                    _LOGGER.warning("✅ Created channel %d switch: %s", channel, device.name)
 
     _LOGGER.info("🔄 Setting up %d switch entities", len(entities))
     async_add_entities(entities)
 
-    # Register device discovery callback for dynamic entity creation
-    def device_discovered_callback():
-        """Handle device discovery for switch entities."""
-        coordinator.hass.async_create_task(_async_device_discovered_callback(coordinator))
-
-    coordinator.async_add_listener(device_discovered_callback)
 
 
-def _create_switch_entities_for_device(coordinator: SymiGatewayCoordinator, device) -> list:
-    """Create switch entities for a device."""
-    entities = []
-
-    if device.channels == 1:
-        # Single channel switch
-        entity = SymiDeviceSwitch(coordinator, device)
-        entities.append(entity)
-        entity_id = f"{device.unique_id}"
-        coordinator._created_switch_entities.add(entity_id)
-        _LOGGER.warning("✅ Created single channel switch: %s", device.name)
-    else:
-        # Multi-channel switch - create individual switches for each channel
-        for channel in range(1, device.channels + 1):
-            entity = SymiDeviceSwitch(coordinator, device, channel)
-            entities.append(entity)
-            entity_id = f"{device.unique_id}_{channel}"
-            coordinator._created_switch_entities.add(entity_id)
-            _LOGGER.warning("✅ Created channel %d switch: %s", channel, device.name)
-
-    return entities
-
-
-async def _async_device_discovered_callback(coordinator: SymiGatewayCoordinator) -> None:
-    """Handle new device discovery for dynamic entity creation."""
-    if not hasattr(coordinator, '_switch_add_entities'):
-        return
-
-    new_entities = []
-
-    # Check for new switch devices
-    if coordinator.gateway and coordinator.gateway.device_manager:
-        for device in coordinator.gateway.device_manager.get_all_devices():
-            if "switch" in device.capabilities:
-                # Check if we already created entities for this device
-                device_id = device.unique_id
-                if device.channels == 1:
-                    if device_id not in coordinator._created_switch_entities:
-                        entity = SymiDeviceSwitch(coordinator, device)
-                        new_entities.append(entity)
-                        coordinator._created_switch_entities.add(device_id)
-                        _LOGGER.warning("🆕 Created new single channel switch: %s", device.name)
-                else:
-                    for channel in range(1, device.channels + 1):
-                        entity_id = f"{device_id}_{channel}"
-                        if entity_id not in coordinator._created_switch_entities:
-                            entity = SymiDeviceSwitch(coordinator, device, channel)
-                            new_entities.append(entity)
-                            coordinator._created_switch_entities.add(entity_id)
-                            _LOGGER.warning("🆕 Created new channel %d switch: %s", channel, device.name)
-
-    if new_entities:
-        _LOGGER.info("🔄 Adding %d new switch entities", len(new_entities))
-        coordinator._switch_add_entities(new_entities)
 
 
 class SymiDiscoverySwitch(CoordinatorEntity, SwitchEntity):

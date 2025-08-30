@@ -28,66 +28,23 @@ async def async_setup_entry(
     """Set up Symi Gateway binary sensor entities."""
     coordinator: SymiGatewayCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-    # Store the add_entities callback for dynamic entity creation
-    coordinator._binary_sensor_add_entities = async_add_entities
-    coordinator._created_binary_sensor_entities = set()
-
     entities = []
 
-    # Add binary sensor entities from gateway device manager
-    if coordinator.gateway and coordinator.gateway.device_manager:
-        for device in coordinator.gateway.device_manager.get_all_devices():
-            if "motion" in device.capabilities or "door" in device.capabilities:
-                _LOGGER.warning("🔍 Creating binary sensor entity for device: %s (Type: %d)", device.name, device.device_type)
-                entity = _create_binary_sensor_entity(coordinator, device)
-                if entity:
-                    entities.append(entity)
-                    coordinator._created_binary_sensor_entities.add(device.unique_id)
-                    _LOGGER.warning("✅ Created binary sensor entity: %s", device.name)
+    # Add binary sensor entities from discovered devices
+    for device in coordinator.discovered_devices.values():
+        if "motion" in device.capabilities or "door" in device.capabilities:
+            _LOGGER.warning("🔍 Creating binary sensor entity for device: %s (Type: %d)", device.name, device.device_type)
+            if device.device_type == DEVICE_TYPE_DOOR_SENSOR:
+                entities.append(SymiDoorSensor(coordinator, device))
+            elif device.device_type == DEVICE_TYPE_MOTION_SENSOR:
+                entities.append(SymiMotionSensor(coordinator, device))
+            else:
+                # Generic binary sensor
+                entities.append(SymiBinarySensor(coordinator, device))
+            _LOGGER.warning("✅ Created binary sensor entity: %s", device.name)
 
+    _LOGGER.info("🔄 Setting up %d binary sensor entities", len(entities))
     async_add_entities(entities)
-
-    # Register device discovery callback for dynamic entity creation
-    def binary_sensor_device_discovered_callback():
-        """Handle device discovery for binary sensor entities."""
-        coordinator.hass.async_create_task(_async_binary_sensor_device_discovered_callback(coordinator))
-
-    coordinator.async_add_listener(binary_sensor_device_discovered_callback)
-
-
-def _create_binary_sensor_entity(coordinator: SymiGatewayCoordinator, device):
-    """Create appropriate binary sensor entity for device."""
-    if device.device_type == DEVICE_TYPE_DOOR_SENSOR:
-        return SymiDoorSensor(coordinator, device)
-    elif device.device_type == DEVICE_TYPE_MOTION_SENSOR:
-        return SymiMotionSensor(coordinator, device)
-    else:
-        # Generic binary sensor
-        return SymiBinarySensor(coordinator, device)
-
-
-async def _async_binary_sensor_device_discovered_callback(coordinator: SymiGatewayCoordinator) -> None:
-    """Handle new device discovery for dynamic binary sensor entity creation."""
-    if not hasattr(coordinator, '_binary_sensor_add_entities'):
-        return
-
-    new_entities = []
-
-    # Check for new binary sensor devices
-    if coordinator.gateway and coordinator.gateway.device_manager:
-        for device in coordinator.gateway.device_manager.get_all_devices():
-            if "motion" in device.capabilities or "door" in device.capabilities:
-                device_id = device.unique_id
-                if device_id not in coordinator._created_binary_sensor_entities:
-                    entity = _create_binary_sensor_entity(coordinator, device)
-                    if entity:
-                        new_entities.append(entity)
-                        coordinator._created_binary_sensor_entities.add(device_id)
-                        _LOGGER.warning("🆕 Created new binary sensor entity: %s", device.name)
-
-    if new_entities:
-        _LOGGER.info("🔄 Adding %d new binary sensor entities", len(new_entities))
-        coordinator._binary_sensor_add_entities(new_entities)
 
 
 class SymiBinarySensor(CoordinatorEntity, BinarySensorEntity):
