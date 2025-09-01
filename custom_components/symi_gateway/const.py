@@ -2,6 +2,17 @@
 from typing import Final
 
 DOMAIN: Final = "symi_gateway"
+DEFAULT_NAME: Final = "Symi Gateway"
+
+# Platforms
+SUPPORTED_DOMAINS = [
+    "light",
+    "switch",
+    "binary_sensor",
+]
+
+# Default values
+DEFAULT_TCP_PORT: Final = 4196
 
 # Configuration keys
 CONF_CONNECTION_TYPE: Final = "connection_type"
