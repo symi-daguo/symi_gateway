@@ -102,7 +102,7 @@ class SymiGateway:
     
     def _handle_frame(self, frame: ProtocolFrame) -> None:
         """Handle received protocol frame."""
-        _LOGGER.info("🎯 Gateway handling frame: opcode=0x%02X, status=%s", frame.opcode, frame.status)
+        _LOGGER.warning("🎯 Gateway handling frame: opcode=0x%02X, status=%s", frame.opcode, frame.status)
 
         # 只有设备控制相关的数据才需要状态同步，查询响应不需要
         if self._is_device_control_frame(frame):
@@ -115,10 +115,16 @@ class SymiGateway:
                 self._handle_scan_response(frame)
             elif frame.opcode == OP_RESP_STOP_SCAN:
                 self._handle_stop_scan_response(frame)
-            elif frame.opcode == OP_RESP_ADD_DEVICE:
-                self._handle_add_device_response(frame)
-            elif frame.opcode == OP_RESP_READ_DEVICE_LIST or frame.opcode == OP_RESP_DEVICE_LIST:
-                self._handle_device_list_response(frame)
+            elif frame.opcode == 0x92:  # OP_RESP_ADD_DEVICE, OP_RESP_READ_DEVICE_LIST, OP_RESP_DEVICE_LIST
+                # 0x92 can be either add device response or device list response
+                # Device list response has 16-byte payload with device info or 0-byte payload for end
+                # Add device response has different payload structure
+                if len(frame.payload) == 16 or len(frame.payload) == 0:
+                    _LOGGER.warning("🎯 ROUTING TO DEVICE LIST HANDLER: opcode=0x%02X, payload_len=%d", frame.opcode, len(frame.payload))
+                    self._handle_device_list_response(frame)
+                else:
+                    _LOGGER.warning("🎯 ROUTING TO ADD DEVICE HANDLER: opcode=0x%02X, payload_len=%d", frame.opcode, len(frame.payload))
+                    self._handle_add_device_response(frame)
             elif frame.opcode == OP_RESP_DEVICE_STATUS_QUERY:
                 self._handle_device_status_response(frame)
             elif frame.opcode == OP_RESP_READ_SOFTWARE_VERSION:
@@ -168,6 +174,7 @@ class SymiGateway:
 
     def _handle_device_list_response(self, frame: ProtocolFrame) -> None:
         """Handle device list response."""
+        _LOGGER.warning("🎯 DEVICE LIST RESPONSE HANDLER CALLED: opcode=0x%02X, status=%s, payload_len=%d", frame.opcode, frame.status, len(frame.payload))
         _LOGGER.warning("🎯 Handling device list response: status=%s, payload_len=%d", frame.status, len(frame.payload))
 
         if frame.status == STATUS_SUCCESS:
