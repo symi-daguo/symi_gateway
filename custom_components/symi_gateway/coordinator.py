@@ -121,9 +121,13 @@ class SymiGatewayCoordinator(DataUpdateCoordinator):
         
         for device in devices:
             self.discovered_devices[device.unique_id] = device
-            self.device_manager.add_device(device)
-            _LOGGER.info("📱 Discovered device: %s (%s)", device.name, device.mac_address)
-        
+            is_new = self.device_manager.add_device(device)
+            _LOGGER.warning("📱 Discovered device: %s (%s), new=%s", device.name, device.mac_address, is_new)
+
+        # Trigger entity creation for all platforms
+        _LOGGER.warning("🔄 Triggering entity creation for %d devices", len(devices))
+        self.hass.async_create_task(self._create_entities_for_devices())
+
         # Notify entity callbacks
         self._notify_entity_callbacks()
 
@@ -131,22 +135,34 @@ class SymiGatewayCoordinator(DataUpdateCoordinator):
         """Parse device list from payload."""
         devices = []
         offset = 0
-        
+
+        _LOGGER.warning("🔍 Parsing device list payload: %s", payload.hex().upper())
+
         while offset < len(payload):
-            if offset + 12 > len(payload):  # Minimum device entry size
+            if offset + 16 > len(payload):  # Each device entry is 16 bytes
                 break
-            
+
             try:
-                # Parse device entry (12 bytes)
-                mac_bytes = payload[offset:offset+6]
+                # Parse device entry (16 bytes based on the received data)
+                device_data = payload[offset:offset+16]
+                _LOGGER.warning("📱 Parsing device entry: %s", device_data.hex().upper())
+
+                # Extract MAC address (6 bytes)
+                mac_bytes = device_data[0:6]
                 mac_address = ":".join(f"{b:02X}" for b in mac_bytes)
-                
-                network_address = int.from_bytes(payload[offset+6:offset+8], 'little')
-                device_type = payload[offset+8]
-                device_sub_type = payload[offset+9]
-                rssi = payload[offset+10] if payload[offset+10] < 128 else payload[offset+10] - 256
-                vendor_id = payload[offset+11]
-                
+
+                # Extract network address (2 bytes, little endian)
+                network_address = int.from_bytes(device_data[6:8], 'little')
+
+                # Extract device type and other info
+                device_type = device_data[8]
+                device_sub_type = device_data[9]
+                rssi = device_data[10] if device_data[10] < 128 else device_data[10] - 256
+                vendor_id = device_data[11]
+
+                # Additional data in bytes 12-15
+                extra_data = device_data[12:16]
+
                 device = DeviceInfo(
                     mac_address=mac_address,
                     network_address=network_address,
@@ -156,17 +172,18 @@ class SymiGatewayCoordinator(DataUpdateCoordinator):
                     vendor_id=vendor_id,
                     last_seen=time.time(),
                 )
-                
+
                 devices.append(device)
-                _LOGGER.debug("📱 Parsed device: %s, type=%d, addr=0x%04X", 
-                            device.name, device_type, network_address)
-                
-                offset += 12
-                
+                _LOGGER.warning("✅ Parsed device: %s, MAC=%s, type=%d, addr=0x%04X",
+                            device.name, mac_address, device_type, network_address)
+
+                offset += 16
+
             except Exception as err:
                 _LOGGER.error("❌ Failed to parse device at offset %d: %s", offset, err)
                 break
-        
+
+        _LOGGER.warning("📋 Total parsed devices: %d", len(devices))
         return devices
 
     def _handle_device_control_response(self, frame: ProtocolFrame) -> None:
@@ -270,6 +287,17 @@ class SymiGatewayCoordinator(DataUpdateCoordinator):
     def available(self) -> bool:
         """Return if coordinator is available."""
         return self.is_connected and self.last_update_success
+
+    async def _create_entities_for_devices(self) -> None:
+        """Create entities for discovered devices."""
+        try:
+            _LOGGER.warning("🏭 Creating entities for discovered devices...")
+
+            # Force reload of platforms to create entities
+            await self.hass.config_entries.async_reload(self.entry.entry_id)
+
+        except Exception as err:
+            _LOGGER.error("❌ Failed to create entities: %s", err)
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Update data."""
