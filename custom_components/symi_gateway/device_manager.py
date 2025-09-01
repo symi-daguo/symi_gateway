@@ -62,22 +62,29 @@ class DeviceInfo:
         type_name = DEVICE_TYPE_NAMES.get(self.device_type, "未知设备")
         
         # Determine channel count for switches
-        # 根据协议文档：dev_sub_type = 具体支持几路 1-8路
-        # 子类型直接等于键数/路数
+        # 根据实际协议数据：dev_sub_type = 具体支持几路
+        channels = 1  # 默认1路
+
         if self.device_type == DEVICE_TYPE_ZERO_FIRE_SWITCH:
-            if self.device_sub_type == 0:
-                channels = 1  # 0表示1路
+            # 零火开关：1=1开, 2=2开, 3=3开, 4=4开, 6=6开
+            if self.device_sub_type in [1, 2, 3, 4, 6]:
+                channels = self.device_sub_type
+                type_name = f"{channels}开{type_name}"
             else:
-                channels = self.device_sub_type  # 子类型直接等于路数
+                channels = 1
+                _LOGGER.warning("Unknown zero fire switch sub_type: %d, defaulting to 1 channel", self.device_sub_type)
+
         elif self.device_type == DEVICE_TYPE_SINGLE_FIRE_SWITCH:
-            if self.device_sub_type == 0:
-                channels = 1  # 0表示1路
+            # 单火开关：类似处理
+            if self.device_sub_type in [1, 2, 3, 4, 6]:
+                channels = self.device_sub_type
+                type_name = f"{channels}开{type_name}"
             else:
-                channels = self.device_sub_type  # 子类型直接等于路数
-            
-            self.channels = channels
-            if channels > 1:
-                type_name = f"{channels}路{type_name}"
+                channels = 1
+                _LOGGER.warning("Unknown single fire switch sub_type: %d, defaulting to 1 channel", self.device_sub_type)
+
+        # 设置通道数
+        self.channels = channels
         
         # Use last 4 characters of MAC for unique identification
         mac_suffix = self.mac_address.replace(":", "")[-4:].upper()
@@ -120,7 +127,8 @@ class DeviceInfo:
             capabilities.extend(["temperature", "humidity"])
 
         elif self.device_type == DEVICE_TYPE_FIVE_COLOR_LIGHT:
-            capabilities.extend(["light", "brightness", "color_temp", "rgb"])
+            # 五色调光灯实际上是双色温调光，不是RGB
+            capabilities.extend(["light", "brightness", "color_temp"])
 
         elif self.device_type == DEVICE_TYPE_TRANSPARENT_MODULE:
             # 透传模块没有控制能力，只用于信号放大

@@ -198,6 +198,16 @@ class SymiGateway:
                 _LOGGER.warning("📋 DEVICE %d/%d: MAC=%s, Addr=0x%04X, VendorID=0x%04X, Type=%d, SubType=%d, Online=%s",
                            index + 1, max_devices, mac_address, network_addr, vendor_id, dev_type, dev_sub_type, online)
 
+                # 根据设备类型显示详细信息
+                if dev_type == 1:  # 零火开关
+                    _LOGGER.warning("🔌 零火开关: %d开 (SubType=%d)", dev_sub_type if dev_sub_type > 0 else 1, dev_sub_type)
+                elif dev_type == 4:  # 智能灯
+                    _LOGGER.warning("💡 智能灯: 支持调光调色温")
+                elif dev_type == 8:  # 人体感应
+                    _LOGGER.warning("👤 人体感应传感器")
+                elif dev_type == 24:  # 五色调光灯
+                    _LOGGER.warning("🌈 五色调光灯: 双色温调光")
+
                 # Create device info
                 device = DeviceInfo(
                     mac_address=mac_address,
