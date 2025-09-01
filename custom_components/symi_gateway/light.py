@@ -15,16 +15,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import (
-    DOMAIN,
-    get_gateway_device_info,
-    MSG_TYPE_ON_OFF,
-    MSG_TYPE_LIGHT_LIGHTNESS,
-    MSG_TYPE_LIGHT_TEMPERATURE,
-    SWITCH_ON,
-    SWITCH_OFF,
-    DEVICE_TYPE_SMART_LIGHT,
-)
+from .const import DOMAIN
 from .coordinator import SymiGatewayCoordinator
 from .device_manager import DeviceInfo
 
@@ -157,10 +148,10 @@ class SymiLight(CoordinatorEntity, LightEntity):
                 _LOGGER.error("❌ Failed to set brightness: %s", self._attr_name)
         
         # Set color temperature if specified
-        if ATTR_COLOR_TEMP_KELVIN in kwargs and ColorMode.COLOR_TEMP in self._attr_supported_color_modes:
-            kelvin = kwargs[ATTR_COLOR_TEMP_KELVIN]
-            # Convert kelvin to 0-100 percentage (2700K-6500K range)
-            color_temp_pct = int((kelvin - 2700) * 100 / (6500 - 2700))
+        if ATTR_COLOR_TEMP in kwargs and ColorMode.COLOR_TEMP in self._attr_supported_color_modes:
+            mireds = kwargs[ATTR_COLOR_TEMP]
+            # Convert mireds to 0-100 percentage
+            color_temp_pct = int((370 - mireds) * 100 / (370 - 154))
             color_temp_pct = max(0, min(100, color_temp_pct))  # Clamp to 0-100
             
             success = await self.coordinator.async_control_device(

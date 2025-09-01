@@ -71,12 +71,14 @@ class DeviceInfo:
                 channels = 1  # 0表示1路
             else:
                 channels = self.device_sub_type  # 子类型直接等于路数
+            self.channels = channels
+            if channels > 1:
+                type_name = f"{channels}路{type_name}"
         elif self.device_type == DEVICE_TYPE_SINGLE_FIRE_SWITCH:
             if self.device_sub_type == 0:
                 channels = 1  # 0表示1路
             else:
                 channels = self.device_sub_type  # 子类型直接等于路数
-            
             self.channels = channels
             if channels > 1:
                 type_name = f"{channels}路{type_name}"

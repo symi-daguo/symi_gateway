@@ -13,7 +13,6 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN
 from .coordinator import SymiGatewayCoordinator
 from .device_manager import DeviceInfo
-from .device_info import get_device_info
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -114,7 +113,14 @@ class SymiDeviceSwitch(CoordinatorEntity, SwitchEntity):
     @property
     def device_info(self) -> dict[str, Any]:
         """Return device info."""
-        return get_device_info(self.device)
+        return {
+            "identifiers": {(DOMAIN, self.device.unique_id)},
+            "name": self.device.name,
+            "manufacturer": "亖米科技",
+            "model": f"设备类型 {self.device.device_type}",
+            "sw_version": "1.0",
+            "via_device": (DOMAIN, self.coordinator.entry.entry_id),
+        }
 
     @property
     def is_on(self) -> bool:
