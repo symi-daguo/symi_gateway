@@ -118,6 +118,8 @@ class SymiGateway:
                 self._handle_add_device_response(frame)
             elif frame.opcode == OP_RESP_READ_DEVICE_LIST or frame.opcode == OP_RESP_DEVICE_LIST:
                 self._handle_device_list_response(frame)
+            elif frame.opcode == OP_RESP_DEVICE_STATUS_QUERY:
+                self._handle_device_status_response(frame)
             elif frame.opcode == OP_RESP_READ_SOFTWARE_VERSION:
                 self._handle_software_version_response(frame)
             elif frame.opcode == OP_RESP_READ_MAC_ADDRESS:
@@ -220,6 +222,17 @@ class SymiGateway:
                 _LOGGER.warning("⚠️ Invalid device list payload length: %d, expected 16 or 0", len(frame.payload))
         else:
             _LOGGER.error("❌ Device list response failed with status: %s", frame.status)
+
+    def _handle_device_status_response(self, frame: ProtocolFrame) -> None:
+        """Handle device status query response."""
+        _LOGGER.warning("📊 Handling device status response: status=%s, payload_len=%d", frame.status, len(frame.payload))
+
+        if frame.status == STATUS_SUCCESS and len(frame.payload) >= 4:
+            # Parse device status response
+            # This might be a different type of response, log it for analysis
+            _LOGGER.warning("📊 Device status payload: %s", frame.payload.hex().upper())
+        else:
+            _LOGGER.warning("❌ Device status query failed with status: %s", frame.status)
 
     def _handle_device_discovery(self, frame: ProtocolFrame) -> None:
         """Handle device discovery event."""

@@ -39,17 +39,52 @@ async def async_setup_entry(
     """Set up Symi Gateway light entities."""
     coordinator: SymiGatewayCoordinator = hass.data[DOMAIN][entry.entry_id]
 
+    # Store the add_entities callback for dynamic entity creation
+    coordinator._light_add_entities = async_add_entities
+    coordinator._created_light_entities = getattr(coordinator, '_created_light_entities', set())
+
     entities = []
 
     # Add light entities from discovered devices
     for device in coordinator.discovered_devices.values():
         if "light" in device.capabilities:
-            _LOGGER.warning("💡 Creating light entity for device: %s (Type: %d)", device.name, device.device_type)
-            entities.append(SymiLight(coordinator, device))
-            _LOGGER.warning("✅ Created light entity: %s", device.name)
+            entity_id = device.unique_id
+            if entity_id not in coordinator._created_light_entities:
+                _LOGGER.warning("💡 Creating light entity for device: %s (Type: %d)", device.name, device.device_type)
+                entities.append(SymiLight(coordinator, device))
+                coordinator._created_light_entities.add(entity_id)
+                _LOGGER.warning("✅ Created light entity: %s", device.name)
 
     _LOGGER.info("🔄 Setting up %d light entities", len(entities))
     async_add_entities(entities)
+
+    # Register callback for future device discoveries
+    def device_discovered_callback():
+        """Handle new device discovery."""
+        hass.async_create_task(_async_handle_new_light_devices(coordinator))
+
+    coordinator.async_add_listener(device_discovered_callback)
+
+
+async def _async_handle_new_light_devices(coordinator: SymiGatewayCoordinator) -> None:
+    """Handle newly discovered devices and create light entities for them."""
+    if not hasattr(coordinator, '_light_add_entities'):
+        return
+
+    new_entities = []
+
+    # Check for new light devices
+    for device in coordinator.discovered_devices.values():
+        if "light" in device.capabilities:
+            entity_id = device.unique_id
+            if entity_id not in coordinator._created_light_entities:
+                new_entities.append(SymiLight(coordinator, device))
+                coordinator._created_light_entities.add(entity_id)
+                _LOGGER.warning("🆕 Created new light entity: %s", device.name)
+
+    if new_entities:
+        _LOGGER.info("🔄 Adding %d new light entities", len(new_entities))
+        coordinator._light_add_entities(new_entities)
 
 
 class SymiLight(CoordinatorEntity, LightEntity):

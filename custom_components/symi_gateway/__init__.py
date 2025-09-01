@@ -32,6 +32,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Forward setup to platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     
+    # Check if this is a reconfiguration (entry was reloaded)
+    if hasattr(entry, 'source') and entry.source == 'reconfigure':
+        _LOGGER.info("🔄 Reconfiguration detected, refreshing devices...")
+        # Refresh devices to discover any new ones
+        await coordinator.async_refresh_devices()
+
     _LOGGER.info("✅ Symi Gateway integration setup complete")
     return True
 

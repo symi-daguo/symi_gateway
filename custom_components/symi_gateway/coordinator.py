@@ -169,14 +169,58 @@ class SymiGatewayCoordinator(DataUpdateCoordinator):
         # Update discovered devices cache from device manager
         if self.gateway.device_manager:
             for device in self.gateway.device_manager.get_all_devices():
-                self.discovered_devices[device.unique_id] = device
-                _LOGGER.info("📱 Loaded device: %s (Type: %d, Capabilities: %s)",
-                           device.name, device.device_type, device.capabilities)
+                if device.unique_id not in self.discovered_devices:
+                    self.discovered_devices[device.unique_id] = device
+                    _LOGGER.info("📱 New device discovered: %s (Type: %d, Capabilities: %s)",
+                               device.name, device.device_type, device.capabilities)
+                else:
+                    # Update existing device info but keep the same unique_id
+                    self.discovered_devices[device.unique_id] = device
+                    _LOGGER.info("📱 Updated existing device: %s", device.name)
 
         # Trigger initial data update to create entities for loaded devices
         await self.async_refresh()
 
         _LOGGER.info("✅ Gateway setup completed with %d devices", len(self.discovered_devices))
+
+    async def async_refresh_devices(self) -> None:
+        """Refresh device list and create new entities for newly discovered devices."""
+        if not self.gateway:
+            _LOGGER.warning("⚠️ Gateway not initialized, cannot refresh devices")
+            return
+
+        _LOGGER.info("🔄 Refreshing device list...")
+
+        # Store current device count
+        old_device_count = len(self.discovered_devices)
+
+        # Read device list from gateway
+        await self.gateway.async_read_device_list()
+
+        # Wait for response processing
+        await asyncio.sleep(2)
+
+        # Update discovered devices cache from device manager
+        new_devices = []
+        if self.gateway.device_manager:
+            for device in self.gateway.device_manager.get_all_devices():
+                if device.unique_id not in self.discovered_devices:
+                    self.discovered_devices[device.unique_id] = device
+                    new_devices.append(device)
+                    _LOGGER.info("🆕 Found new device: %s (Type: %d, Capabilities: %s)",
+                               device.name, device.device_type, device.capabilities)
+                else:
+                    # Update existing device info
+                    self.discovered_devices[device.unique_id] = device
+
+        # Trigger data update to notify entity platforms
+        await self.async_refresh()
+
+        new_device_count = len(self.discovered_devices)
+        _LOGGER.info("✅ Device refresh completed: %d total devices (%d new)",
+                   new_device_count, new_device_count - old_device_count)
+
+        return new_devices
     
     async def _async_load_devices(self) -> None:
         """Load devices from storage."""

@@ -82,6 +82,73 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Get the options flow for this handler."""
         return OptionsFlowHandler(config_entry)
 
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        """Handle reconfiguration of the integration."""
+        _LOGGER.info("🔄 Starting reconfiguration flow")
+
+        if user_input is not None:
+            # Validate the new configuration
+            try:
+                info = await validate_input(self.hass, user_input)
+            except CannotConnect:
+                return self.async_show_form(
+                    step_id="reconfigure",
+                    data_schema=self._get_reconfigure_schema(user_input),
+                    errors={"base": "cannot_connect"}
+                )
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.exception("Unexpected exception during reconfiguration")
+                return self.async_show_form(
+                    step_id="reconfigure",
+                    data_schema=self._get_reconfigure_schema(user_input),
+                    errors={"base": "unknown"}
+                )
+
+            # Update the config entry with new data
+            return self.async_update_reload_and_abort(
+                self._get_reconfigure_entry(),
+                data=user_input,
+                title=info["title"]
+            )
+
+        # Show reconfiguration form with current values
+        current_data = self._get_reconfigure_entry().data
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=self._get_reconfigure_schema(current_data),
+            description_placeholders={"current_config": self._format_current_config(current_data)}
+        )
+
+    def _get_reconfigure_schema(self, current_data: dict[str, Any]) -> vol.Schema:
+        """Get schema for reconfiguration with current values as defaults."""
+        connection_type = current_data.get(CONF_CONNECTION_TYPE, CONNECTION_TYPE_TCP)
+
+        if connection_type == CONNECTION_TYPE_SERIAL:
+            return vol.Schema({
+                vol.Required(CONF_CONNECTION_TYPE, default=connection_type): vol.In({
+                    CONNECTION_TYPE_SERIAL: "串口连接",
+                    CONNECTION_TYPE_TCP: "TCP连接"
+                }),
+                vol.Required(CONF_SERIAL_PORT, default=current_data.get(CONF_SERIAL_PORT, "")): vol.In(get_serial_ports()),
+                vol.Required(CONF_BAUDRATE, default=current_data.get(CONF_BAUDRATE, DEFAULT_BAUDRATE)): vol.In([9600, 19200, 38400, 57600, 115200])
+            })
+        else:
+            return vol.Schema({
+                vol.Required(CONF_CONNECTION_TYPE, default=connection_type): vol.In({
+                    CONNECTION_TYPE_SERIAL: "串口连接",
+                    CONNECTION_TYPE_TCP: "TCP连接"
+                }),
+                vol.Required(CONF_TCP_HOST, default=current_data.get(CONF_TCP_HOST, "")): str,
+                vol.Required(CONF_TCP_PORT, default=current_data.get(CONF_TCP_PORT, DEFAULT_TCP_PORT)): vol.Coerce(int)
+            })
+
+    def _format_current_config(self, data: dict[str, Any]) -> str:
+        """Format current configuration for display."""
+        if data.get(CONF_CONNECTION_TYPE) == CONNECTION_TYPE_SERIAL:
+            return f"串口: {data.get(CONF_SERIAL_PORT)} ({data.get(CONF_BAUDRATE)})"
+        else:
+            return f"TCP: {data.get(CONF_TCP_HOST)}:{data.get(CONF_TCP_PORT)}"
+
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
