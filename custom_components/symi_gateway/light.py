@@ -6,7 +6,7 @@ from typing import Any
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
-    ATTR_COLOR_TEMP,
+    ATTR_COLOR_TEMP_KELVIN,
     ColorMode,
     LightEntity,
 )
@@ -29,12 +29,6 @@ async def async_setup_entry(
 ) -> None:
     """Set up Symi Gateway light entities."""
     await async_add_setuper(hass, config_entry, 'light', async_add_entities)
-
-
-def async_add_entities(device: SymiDevice, conv: Converter):
-    """Add light entity."""
-    if conv.domain == 'light':
-        return SymiLight(device, conv)
 
 
 class SymiLight(SymiEntity, LightEntity):
@@ -90,8 +84,8 @@ class SymiLight(SymiEntity, LightEntity):
         if ATTR_BRIGHTNESS in kwargs and ColorMode.BRIGHTNESS in self._attr_supported_color_modes:
             params["brightness"] = kwargs[ATTR_BRIGHTNESS]
 
-        if ATTR_COLOR_TEMP in kwargs and ColorMode.COLOR_TEMP in self._attr_supported_color_modes:
-            params["color_temp"] = kwargs[ATTR_COLOR_TEMP]
+        if ATTR_COLOR_TEMP_KELVIN in kwargs and ColorMode.COLOR_TEMP in self._attr_supported_color_modes:
+            params["color_temp"] = kwargs[ATTR_COLOR_TEMP_KELVIN]
 
         await self.device_send_props(params)
 

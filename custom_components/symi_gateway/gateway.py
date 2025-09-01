@@ -28,10 +28,12 @@ class SymiGateway:
     writer: Optional[asyncio.StreamWriter] = None
     main_task: Optional[asyncio.Task] = None
 
-    def __init__(self, host: str, **options):
+    def __init__(self, host: str, port: int = 4196, **options):
         """Initialize gateway."""
         self.host = host
+        self.port = port
         self.hass = options.get('hass')
+        self.entry = options.get('entry')
         self.timeout = options.get('timeout', 5)
         self.keepalive = options.get('keepalive', 60)
         self.entry_id = options.get('entry_id')
@@ -52,7 +54,21 @@ class SymiGateway:
     async def setup_entity(self, domain: str, device: "SymiDevice", conv: "Converter"):
         handler = self.setups.get(domain)
         if handler:
-            handler(device, conv)
+            # Create entity based on domain
+            entity = None
+            if domain == 'light':
+                from .light import SymiLight
+                entity = SymiLight(device, conv)
+            elif domain == 'switch':
+                from .switch import SymiSwitch
+                entity = SymiSwitch(device, conv)
+            elif domain == 'binary_sensor':
+                from .binary_sensor import SymiBinarySensor
+                entity = SymiBinarySensor(device, conv)
+
+            if entity:
+                handler([entity])
+                self.log.info('Created %s entity: %s', domain, entity.entity_id)
         else:
             self.log.warning('Setup %s not ready for %s', domain, [device, conv])
 
@@ -225,6 +241,12 @@ class SymiGateway:
     async def get_node(self, nid=0, wait_result=True):
         cmd = 'gateway_get.node'
         return await self.send(cmd, params={'id': nid}, wait_result=wait_result)
+
+    async def discover_devices(self):
+        """Discover devices from gateway."""
+        self.log.info("🔍 Starting device discovery...")
+        await self.topology(wait_result=True)
+        self.log.info("✅ Device discovery completed. Found %d devices", len(self.devices))
 
     async def control_device(self, device_id: str, **kwargs):
         """Control a device."""

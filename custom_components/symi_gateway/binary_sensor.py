@@ -28,12 +28,6 @@ async def async_setup_entry(
     """Set up Symi Gateway binary sensor entities."""
     await async_add_setuper(hass, config_entry, 'binary_sensor', async_add_entities)
 
-
-def async_add_entities(device: SymiDevice, conv: Converter):
-    """Add binary sensor entity."""
-    if conv.domain == 'binary_sensor':
-        return SymiBinarySensor(device, conv)
-
 class SymiBinarySensor(SymiEntity, BinarySensorEntity):
     """Symi binary sensor entity."""
 

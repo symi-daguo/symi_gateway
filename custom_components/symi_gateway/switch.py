@@ -25,12 +25,6 @@ async def async_setup_entry(
     """Set up Symi Gateway switch entities."""
     await async_add_setuper(hass, config_entry, 'switch', async_add_entities)
 
-
-def async_add_entities(device: SymiDevice, conv: Converter):
-    """Add switch entity."""
-    if conv.domain == 'switch':
-        return SymiSwitch(device, conv)
-
 class SymiSwitch(SymiEntity, SwitchEntity):
     """Symi switch entity."""
 
