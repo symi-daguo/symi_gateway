@@ -11,11 +11,11 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import async_add_setuper, SymiEntity
 from .const import DOMAIN
-from .device import SymiDevice, MotionDevice
-from .converters.base import Converter
+from .coordinator import SymiGatewayCoordinator
+from .device_manager import DeviceInfo
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -26,29 +26,62 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Symi Gateway binary sensor entities."""
-    await async_add_setuper(hass, config_entry, 'binary_sensor', async_add_entities)
+    coordinator: SymiGatewayCoordinator = hass.data[DOMAIN][config_entry.entry_id]
 
-class SymiBinarySensor(SymiEntity, BinarySensorEntity):
+    # Get binary sensor devices
+    motion_devices = coordinator.get_devices_by_capability("motion")
+    door_devices = coordinator.get_devices_by_capability("door")
+
+    entities = []
+    for device in motion_devices:
+        entities.append(SymiBinarySensor(coordinator, device, "motion"))
+
+    for device in door_devices:
+        entities.append(SymiBinarySensor(coordinator, device, "door"))
+
+    if entities:
+        async_add_entities(entities)
+        _LOGGER.info("Added %d binary sensor entities", len(entities))
+
+
+class SymiBinarySensor(CoordinatorEntity, BinarySensorEntity):
     """Symi binary sensor entity."""
 
-    def __init__(self, device: SymiDevice, conv: Converter) -> None:
+    def __init__(self, coordinator: SymiGatewayCoordinator, device: DeviceInfo, sensor_type: str) -> None:
         """Initialize the binary sensor."""
-        super().__init__(device, conv)
+        super().__init__(coordinator)
+        self._device = device
+        self._sensor_type = sensor_type
 
-        # Set device class based on converter attribute
-        if conv.attr == 'motion':
+        self._attr_name = f"{device.name}"
+        self._attr_unique_id = f"{DOMAIN}_{device.unique_id}_{sensor_type}"
+
+        # Set device class based on sensor type
+        if sensor_type == 'motion':
             self._attr_device_class = BinarySensorDeviceClass.MOTION
-        elif conv.attr == 'door':
+        elif sensor_type == 'door':
             self._attr_device_class = BinarySensorDeviceClass.DOOR
         else:
             self._attr_device_class = None
 
     @property
+    def device_info(self) -> dict[str, Any]:
+        """Return device info."""
+        return {
+            "identifiers": {(DOMAIN, self._device.unique_id)},
+            "name": self._device.name,
+            "manufacturer": "Symi",
+            "model": f"Binary Sensor Type {self._device.device_type}",
+            "sw_version": "1.0",
+            "via_device": (DOMAIN, self.coordinator.entry.entry_id),
+        }
+
+    @property
     def is_on(self) -> bool | None:
         """Return true if binary sensor is on."""
-        return bool(self._attr_extra_state_attributes.get(self._name, False))
+        return self._device.get_state(self._sensor_type) or False
 
     @property
     def available(self) -> bool:
         """Return if entity is available."""
-        return self.device.online
+        return self._device.online and self.coordinator.available

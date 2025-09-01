@@ -37,5 +37,17 @@
     "abort": {
       "already_configured": "已配置"
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "重新配置 Symi Gateway",
+        "description": "修改网关连接参数",
+        "data": {
+          "host": "IP地址",
+          "port": "端口号"
+        }
+      }
+    }
   }
 }
