@@ -71,14 +71,12 @@ class DeviceInfo:
                 channels = 1  # 0表示1路
             else:
                 channels = self.device_sub_type  # 子类型直接等于路数
-            self.channels = channels
-            if channels > 1:
-                type_name = f"{channels}路{type_name}"
         elif self.device_type == DEVICE_TYPE_SINGLE_FIRE_SWITCH:
             if self.device_sub_type == 0:
                 channels = 1  # 0表示1路
             else:
                 channels = self.device_sub_type  # 子类型直接等于路数
+            
             self.channels = channels
             if channels > 1:
                 type_name = f"{channels}路{type_name}"
@@ -248,18 +246,19 @@ class DeviceManager:
     def add_device(self, device: DeviceInfo) -> bool:
         """Add a device."""
         device_id = device.unique_id
-        
+        _LOGGER.warning("🔍 Trying to add device: ID=%s, MAC=%s, Type=%d", device_id, device.mac_address, device.device_type)
+
         if device_id in self.devices:
             # Update existing device
             existing = self.devices[device_id]
             existing.rssi = device.rssi
             existing.last_seen = device.last_seen
-            _LOGGER.info("📱 Updated existing device: %s", device.name)
+            _LOGGER.warning("📱 Updated existing device: %s", device.name)
             return False
         else:
             # Add new device
             self.devices[device_id] = device
-            _LOGGER.info("🆕 Added new device: %s (%s)", device.name, device.mac_address)
+            _LOGGER.warning("🆕 Added new device: %s (%s) - Total devices: %d", device.name, device.mac_address, len(self.devices))
             return True
     
     def get_device(self, device_id: str) -> Optional[DeviceInfo]:
