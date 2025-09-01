@@ -80,11 +80,13 @@ async def _check_gateway(ip: str, port: int) -> dict[str, Any]:
             timeout=2.0
         )
         
-        # Send a simple test message
-        test_message = '{"method":"gateway_get.info","params":{},"id":1}\r\n'
-        writer.write(test_message.encode())
+        # Send a simple test message (read software version)
+        from .protocol import ProtocolHandler
+        handler = ProtocolHandler()
+        test_message = handler.build_frame(0x02)  # OP_READ_SOFTWARE_VERSION
+        writer.write(test_message)
         await writer.drain()
-        
+
         # Try to read response
         response = await asyncio.wait_for(reader.read(1024), timeout=2.0)
         
