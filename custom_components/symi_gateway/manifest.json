@@ -10,7 +10,7 @@
   "platforms": ["switch", "light", "binary_sensor"],
   "issue_tracker": "https://github.com/symi/symi-gateway-ha/issues",
   "requirements": ["pyserial>=3.5"],
-  "version": "5.0.3",
+  "version": "5.0.4",
   "homeassistant": "2025.1.0",
   "after_dependencies": [],
   "bluetooth": false,

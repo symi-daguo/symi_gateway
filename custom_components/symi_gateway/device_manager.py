@@ -40,18 +40,16 @@ class DeviceInfo:
     device_sub_type: int
     rssi: int
     vendor_id: int
-    device_id: str = ""  # Unique device identifier
     name: str = ""
     channels: int = 1
     capabilities: list[str] = field(default_factory=list)
     state: dict[str, Any] = field(default_factory=dict)
     last_seen: Optional[float] = None
     online: bool = True  # Device online status
-    
+
     def __post_init__(self):
         """Post-initialization setup."""
-        if not self.device_id:
-            self.device_id = self.mac_address.replace(":", "").lower()
+        # device_id is now a property, no need to set it here
 
         if not self.name:
             self.name = self._generate_name()
@@ -246,19 +244,18 @@ class DeviceManager:
     def add_device(self, device: DeviceInfo) -> bool:
         """Add a device."""
         device_id = device.unique_id
-        _LOGGER.warning("🔍 Trying to add device: ID=%s, MAC=%s, Type=%d", device_id, device.mac_address, device.device_type)
-
+        
         if device_id in self.devices:
             # Update existing device
             existing = self.devices[device_id]
             existing.rssi = device.rssi
             existing.last_seen = device.last_seen
-            _LOGGER.warning("📱 Updated existing device: %s", device.name)
+            _LOGGER.info("📱 Updated existing device: %s", device.name)
             return False
         else:
             # Add new device
             self.devices[device_id] = device
-            _LOGGER.warning("🆕 Added new device: %s (%s) - Total devices: %d", device.name, device.mac_address, len(self.devices))
+            _LOGGER.info("🆕 Added new device: %s (%s)", device.name, device.mac_address)
             return True
     
     def get_device(self, device_id: str) -> Optional[DeviceInfo]:
