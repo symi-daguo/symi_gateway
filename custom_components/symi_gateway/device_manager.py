@@ -7,6 +7,7 @@ from typing import Any, Optional
 
 from .const import (
     DEVICE_TYPE_NAMES,
+    DEVICE_TYPE_UNKNOWN,
     DEVICE_TYPE_ZERO_FIRE_SWITCH,
     DEVICE_TYPE_SINGLE_FIRE_SWITCH,
     DEVICE_TYPE_SMART_SOCKET,
@@ -18,6 +19,13 @@ from .const import (
     DEVICE_TYPE_CARD_POWER,
     DEVICE_TYPE_THERMOSTAT,
     DEVICE_TYPE_TEMP_HUMIDITY,
+    DEVICE_TYPE_SCENE_SWITCH,
+    DEVICE_TYPE_OFFLINE_VOICE_CONTROLLER,
+    DEVICE_TYPE_SMART_DOOR_LOCK,
+    DEVICE_TYPE_WATER_ALARM_SENSOR,
+    DEVICE_TYPE_SMOKE_ALARM_SENSOR,
+    DEVICE_TYPE_SMART_TV_BOX,
+    DEVICE_TYPE_SINGLE_FIRE_SCENE_SWITCH,
     DEVICE_TYPE_TRANSPARENT_MODULE,
     DEVICE_TYPE_FIVE_COLOR_LIGHT,
     DEVICE_TYPE_TRANSPARENT_MODULE_74,
@@ -115,15 +123,38 @@ class DeviceInfo:
         elif self.device_type == DEVICE_TYPE_FIVE_COLOR_LIGHT:
             capabilities.extend(["light", "brightness", "color_temp", "rgb"])
 
-        elif self.device_type == DEVICE_TYPE_TRANSPARENT_MODULE:
-            capabilities.extend(["switch"])  # 透传模块默认作为开关
+        elif self.device_type == DEVICE_TYPE_SCENE_SWITCH:
+            capabilities.extend(["switch", "scene_control"])
+            if self.channels > 1:
+                capabilities.extend([f"switch_{i}" for i in range(1, self.channels + 1)])
 
-        elif self.device_type == DEVICE_TYPE_TRANSPARENT_MODULE_74:
-            capabilities.extend(["switch"])  # 透传模块(类型74)默认作为开关
+        elif self.device_type == DEVICE_TYPE_SINGLE_FIRE_SCENE_SWITCH:
+            capabilities.extend(["switch", "scene_control"])
+            if self.channels > 1:
+                capabilities.extend([f"switch_{i}" for i in range(1, self.channels + 1)])
 
-        elif self.device_type == DEVICE_TYPE_TRANSPARENT_MODULE:
-            # 透传模块没有控制能力，只用于信号放大
-            capabilities.extend(["transparent"])
+        elif self.device_type == DEVICE_TYPE_OFFLINE_VOICE_CONTROLLER:
+            capabilities.extend(["voice_control"])
+
+        elif self.device_type == DEVICE_TYPE_SMART_DOOR_LOCK:
+            capabilities.extend(["lock"])
+
+        elif self.device_type == DEVICE_TYPE_WATER_ALARM_SENSOR:
+            capabilities.extend(["water_leak"])
+
+        elif self.device_type == DEVICE_TYPE_SMOKE_ALARM_SENSOR:
+            capabilities.extend(["smoke"])
+
+        elif self.device_type == DEVICE_TYPE_SMART_TV_BOX:
+            capabilities.extend(["media_player"])
+
+        elif self.device_type in [DEVICE_TYPE_TRANSPARENT_MODULE, DEVICE_TYPE_TRANSPARENT_MODULE_74]:
+            # 透传模块默认作为开关使用
+            capabilities.extend(["switch"])
+
+        elif self.device_type == DEVICE_TYPE_UNKNOWN:
+            # 未知设备类型，默认不添加任何能力
+            capabilities.extend(["unknown"])
 
         return capabilities
 

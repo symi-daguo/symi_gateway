@@ -89,7 +89,8 @@ STATUS_PAIRING_FAILED_EVENT: Final = 0x04
 STATUS_NODE_ACK_EVENT: Final = 0x05
 STATUS_NODE_STATUS_EVENT: Final = 0x06
 
-# Device types
+# Device types (based on protocol document 3.5.2)
+DEVICE_TYPE_UNKNOWN: Final = 0
 DEVICE_TYPE_ZERO_FIRE_SWITCH: Final = 1  # 零火开关
 DEVICE_TYPE_SINGLE_FIRE_SWITCH: Final = 2  # 单火开关
 DEVICE_TYPE_SMART_SOCKET: Final = 3  # 智能插座
@@ -114,6 +115,7 @@ DEVICE_TYPE_TRANSPARENT_MODULE_74: Final = 74  # 透传模块(类型74)
 
 # Device type names
 DEVICE_TYPE_NAMES: Final = {
+    DEVICE_TYPE_UNKNOWN: "未知设备",
     DEVICE_TYPE_ZERO_FIRE_SWITCH: "零火开关",
     DEVICE_TYPE_SINGLE_FIRE_SWITCH: "单火开关", 
     DEVICE_TYPE_SMART_SOCKET: "智能插座",
@@ -171,60 +173,8 @@ CURTAIN_OPEN: Final = 0x01
 CURTAIN_CLOSE: Final = 0x02
 CURTAIN_STOP: Final = 0x03
 
-# Control source
-CONTROL_SOURCE_LOCAL: Final = 0x01
-CONTROL_SOURCE_NETWORK: Final = 0x02
-CONTROL_SOURCE_DUAL: Final = 0x03
 
-# Discovery timeout
-DISCOVERY_TIMEOUT: Final = 120
-SCAN_RESPONSE_TIMEOUT: Final = 10
-
-# Platforms
-PLATFORMS: Final = ["switch", "light", "binary_sensor"]
-
-# Vendor ID
-SYMI_VENDOR_ID: Final = 0x01A8  # 小端序存储
-
-# Group control address
-GROUP_CONTROL_ADDRESS: Final = 0xC0BC
-
-# Default scene IDs
-SCENE_ID_MIN: Final = 1
-SCENE_ID_MAX: Final = 16
-
-# Message Types (from protocol document 3.5.3)
-MSG_TYPE_ON_OFF: Final = 0x02                    # 开关控制
-MSG_TYPE_LIGHT_LIGHTNESS: Final = 0x03           # 调光亮度
-MSG_TYPE_LIGHT_TEMPERATURE: Final = 0x04         # 色温控制
-MSG_TYPE_CURT_RUN_STATUS: Final = 0x05           # 窗帘控制
-MSG_TYPE_CURT_RUN_PER_POS: Final = 0x06          # 窗帘位置
-MSG_TYPE_SCENE_PANEL_EVENT: Final = 0x07         # 场景面板事件
-MSG_TYPE_DOOR_SENSOR_STATUS: Final = 0x09        # 门磁状态
-MSG_TYPE_BATTERY_LEVEL_STATUS: Final = 0x0A      # 电池电量
-MSG_TYPE_HB_DET_STATUS: Final = 0x0B             # 人体感应状态
-MSG_TYPE_CTRL_SOURCE: Final = 0x0D               # 控制源
-MSG_TYPE_CARD_DET_STATUS: Final = 0x0E           # 插卡状态
-MSG_TYPE_SOFT_VERSION: Final = 0x0F              # 软件版本
-MSG_TYPE_SENSOR_TEMP: Final = 0x16               # 温度传感器
-MSG_TYPE_SENSOR_HUMI: Final = 0x17               # 湿度传感器
-MSG_TYPE_TMPC_TEMP: Final = 0x1B                 # 温控器温度
-MSG_TYPE_TMPC_WIND_SPEED: Final = 0x1C           # 温控器风速
-MSG_TYPE_TMPC_MODE: Final = 0x1D                 # 温控器模式
-MSG_TYPE_SENSOR_WATER_ALARM: Final = 0x2A        # 水浸报警
-MSG_TYPE_SENSOR_SMOKE_ALARM: Final = 0x2B        # 烟感报警
-
-# Switch control values
-SWITCH_OFF: Final = 0x01                         # 关闭
-SWITCH_ON: Final = 0x02                          # 打开
-
-# Curtain control values
-CURTAIN_OPEN: Final = 0x01                       # 打开
-CURTAIN_CLOSE: Final = 0x02                      # 关闭
-CURTAIN_STOP: Final = 0x03                       # 停止
-
-
-def get_gateway_device_info(entry_id: str) -> dict[str, any]:
+def get_gateway_device_info(entry_id: str) -> dict[str, str]:
     """Get consistent gateway device info."""
     return {
         "identifiers": {(DOMAIN, entry_id)},
