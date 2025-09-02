@@ -82,12 +82,14 @@ class SymiSwitch(CoordinatorEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the switch on."""
         if self._device.channels == 1:
-            # Single channel switch
-            param = bytes([0x02])  # Turn on
+            # Single channel switch: bit1-2 = 10 (开启)
+            param = bytes([0x02])  # 10 in bit1-2
         else:
-            # Multi-channel switch
-            channel_mask = 1 << (self._channel - 1)
-            param = bytes([channel_mask, 0x02])  # Channel mask + turn on
+            # Multi-channel switch: calculate bit position
+            # Channel 1: bit1-2, Channel 2: bit3-4, etc.
+            bit_pos = (self._channel - 1) * 2 + 1  # +1 for bit position
+            param_value = 0x02 << bit_pos  # 10 shifted to correct position
+            param = bytes([param_value])
 
         success = await self.coordinator.async_control_device(
             self._device.network_address,
@@ -101,12 +103,14 @@ class SymiSwitch(CoordinatorEntity, SwitchEntity):
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the switch off."""
         if self._device.channels == 1:
-            # Single channel switch
-            param = bytes([0x01])  # Turn off
+            # Single channel switch: bit1-2 = 01 (关闭)
+            param = bytes([0x01])  # 01 in bit1-2
         else:
-            # Multi-channel switch
-            channel_mask = 1 << (self._channel - 1)
-            param = bytes([channel_mask, 0x01])  # Channel mask + turn off
+            # Multi-channel switch: calculate bit position
+            # Channel 1: bit1-2, Channel 2: bit3-4, etc.
+            bit_pos = (self._channel - 1) * 2 + 1  # +1 for bit position
+            param_value = 0x01 << bit_pos  # 01 shifted to correct position
+            param = bytes([param_value])
 
         success = await self.coordinator.async_control_device(
             self._device.network_address,

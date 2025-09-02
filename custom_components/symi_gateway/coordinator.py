@@ -71,18 +71,19 @@ class SymiGatewayCoordinator(DataUpdateCoordinator):
             if not await self.tcp_comm.async_connect():
                 _LOGGER.error("❌ Failed to connect to gateway")
                 return False
-            
+
             self.is_connected = True
-            
+
             # Register frame callback
             self.tcp_comm.add_frame_callback(self._handle_frame)
-            
-            # Read existing devices
-            await self.async_read_device_list()
-            
+
+            # Read existing devices ONCE
+            if not self.discovered_devices:  # Only read if not already discovered
+                await self.async_read_device_list()
+
             _LOGGER.info("✅ Coordinator setup completed")
             return True
-            
+
         except Exception as err:
             _LOGGER.error("❌ Coordinator setup failed: %s", err)
             return False
@@ -119,14 +120,20 @@ class SymiGatewayCoordinator(DataUpdateCoordinator):
         _LOGGER.info("📋 Parsing device list: %d bytes", len(frame.payload))
         devices = self._parse_device_list(frame.payload)
         
+        new_devices = []
         for device in devices:
-            self.discovered_devices[device.unique_id] = device
-            is_new = self.device_manager.add_device(device)
-            _LOGGER.warning("📱 Discovered device: %s (%s), new=%s", device.name, device.mac_address, is_new)
+            if device.unique_id not in self.discovered_devices:
+                self.discovered_devices[device.unique_id] = device
+                is_new = self.device_manager.add_device(device)
+                new_devices.append(device)
+                _LOGGER.warning("📱 NEW device discovered: %s (%s)", device.name, device.mac_address)
+            else:
+                _LOGGER.debug("📱 Device already known: %s", device.name)
 
-        # Trigger entity creation for all platforms
-        _LOGGER.warning("🔄 Triggering entity creation for %d devices", len(devices))
-        self.hass.async_create_task(self._create_entities_for_devices())
+        # Only trigger entity creation for new devices
+        if new_devices:
+            _LOGGER.warning("🔄 Triggering entity creation for %d NEW devices", len(new_devices))
+            self.hass.async_create_task(self._create_entities_for_devices())
 
         # Notify entity callbacks
         self._notify_entity_callbacks()
@@ -293,8 +300,11 @@ class SymiGatewayCoordinator(DataUpdateCoordinator):
         try:
             _LOGGER.warning("🏭 Creating entities for discovered devices...")
 
-            # Force reload of platforms to create entities
-            await self.hass.config_entries.async_reload(self.entry.entry_id)
+            # Set updated data to trigger entity updates
+            self.async_set_updated_data({
+                "devices": list(self.device_manager.devices.values()),
+                "timestamp": time.time()
+            })
 
         except Exception as err:
             _LOGGER.error("❌ Failed to create entities: %s", err)

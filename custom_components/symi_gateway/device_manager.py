@@ -57,23 +57,19 @@ class DeviceInfo:
 
     def _generate_name(self) -> str:
         """Generate device name based on type and address."""
-        type_name = DEVICE_TYPE_NAMES.get(self.device_type, "未知设备")
+        type_name = DEVICE_TYPE_NAMES.get(self.device_type, f"未知设备({self.device_type})")
 
         # Determine channel count for switches
-        if self.device_type == DEVICE_TYPE_ZERO_FIRE_SWITCH:
+        if self.device_type in [DEVICE_TYPE_ZERO_FIRE_SWITCH, DEVICE_TYPE_SINGLE_FIRE_SWITCH]:
             if self.device_sub_type == 0:
-                channels = 1  # 0表示1路
+                self.channels = 1  # 0表示1路
             else:
-                channels = self.device_sub_type  # 子类型直接等于路数
-        elif self.device_type == DEVICE_TYPE_SINGLE_FIRE_SWITCH:
-            if self.device_sub_type == 0:
-                channels = 1  # 0表示1路
-            else:
-                channels = self.device_sub_type  # 子类型直接等于路数
+                self.channels = self.device_sub_type  # 子类型直接等于路数
 
-            self.channels = channels
-            if channels > 1:
-                type_name = f"{channels}路{type_name}"
+            if self.channels > 1:
+                type_name = f"{self.channels}路{type_name}"
+        else:
+            self.channels = 1  # 其他设备默认1路
 
         # Use last 4 characters of MAC for unique identification
         mac_suffix = self.mac_address.replace(":", "")[-4:].upper()

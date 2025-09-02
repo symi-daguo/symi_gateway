@@ -112,11 +112,11 @@ class SymiLight(CoordinatorEntity, LightEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the light."""
-        # Turn on the light
+        # Turn on the light using switch control
         success = await self.coordinator.async_control_device(
             self._device.network_address,
             MSG_TYPE_SWITCH_CONTROL,
-            bytes([0x02])  # Turn on
+            bytes([0x02])  # Turn on: bit1-2 = 10
         )
 
         if not success:
@@ -135,7 +135,7 @@ class SymiLight(CoordinatorEntity, LightEntity):
                 bytes([brightness_pct])
             )
 
-        # Set color temperature if specified
+        # Set color temperature if specified (use mireds, not kelvin)
         if ATTR_COLOR_TEMP_KELVIN in kwargs and ColorMode.COLOR_TEMP in self._attr_supported_color_modes:
             kelvin = kwargs[ATTR_COLOR_TEMP_KELVIN]
             # Convert kelvin to 0-100 percentage (2000K-6500K)
@@ -153,7 +153,7 @@ class SymiLight(CoordinatorEntity, LightEntity):
         success = await self.coordinator.async_control_device(
             self._device.network_address,
             MSG_TYPE_SWITCH_CONTROL,
-            bytes([0x01])  # Turn off
+            bytes([0x01])  # Turn off: bit1-2 = 01
         )
 
         if not success:
