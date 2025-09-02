@@ -30,7 +30,10 @@ async def async_setup_entry(
     """Set up Symi Gateway light entities."""
     coordinator: SymiGatewayCoordinator = hass.data[DOMAIN][config_entry.entry_id]
 
-    # Get light devices
+    # Register platform callback for dynamic entity creation
+    coordinator.add_platform_callback("light", async_add_entities)
+
+    # Get light devices that are already discovered
     light_devices = coordinator.get_devices_by_capability("brightness")
 
     entities = []

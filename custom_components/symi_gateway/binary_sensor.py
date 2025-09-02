@@ -28,7 +28,10 @@ async def async_setup_entry(
     """Set up Symi Gateway binary sensor entities."""
     coordinator: SymiGatewayCoordinator = hass.data[DOMAIN][config_entry.entry_id]
 
-    # Get binary sensor devices
+    # Register platform callback for dynamic entity creation
+    coordinator.add_platform_callback("binary_sensor", async_add_entities)
+
+    # Get binary sensor devices that are already discovered
     motion_devices = coordinator.get_devices_by_capability("motion")
     door_devices = coordinator.get_devices_by_capability("door")
 

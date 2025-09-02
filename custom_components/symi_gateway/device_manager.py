@@ -20,6 +20,7 @@ from .const import (
     DEVICE_TYPE_TEMP_HUMIDITY,
     DEVICE_TYPE_TRANSPARENT_MODULE,
     DEVICE_TYPE_FIVE_COLOR_LIGHT,
+    DEVICE_TYPE_TRANSPARENT_MODULE_74,
     MSG_TYPE_SWITCH_CONTROL,
     MSG_TYPE_BRIGHTNESS_CONTROL,
     MSG_TYPE_COLOR_TEMP_CONTROL,
@@ -113,6 +114,12 @@ class DeviceInfo:
 
         elif self.device_type == DEVICE_TYPE_FIVE_COLOR_LIGHT:
             capabilities.extend(["light", "brightness", "color_temp", "rgb"])
+
+        elif self.device_type == DEVICE_TYPE_TRANSPARENT_MODULE:
+            capabilities.extend(["switch"])  # 透传模块默认作为开关
+
+        elif self.device_type == DEVICE_TYPE_TRANSPARENT_MODULE_74:
+            capabilities.extend(["switch"])  # 透传模块(类型74)默认作为开关
 
         elif self.device_type == DEVICE_TYPE_TRANSPARENT_MODULE:
             # 透传模块没有控制能力，只用于信号放大

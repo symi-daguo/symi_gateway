@@ -59,6 +59,9 @@ class SymiGatewayCoordinator(DataUpdateCoordinator):
         
         # Callbacks for entity creation
         self._entity_callbacks: list[Callable] = []
+
+        # Platform callbacks for dynamic entity creation
+        self._platform_callbacks: dict[str, Callable] = {}
         
         # Response handling
         self._pending_responses: dict[int, asyncio.Future] = {}
@@ -133,7 +136,8 @@ class SymiGatewayCoordinator(DataUpdateCoordinator):
         # Only trigger entity creation for new devices
         if new_devices:
             _LOGGER.warning("🔄 Triggering entity creation for %d NEW devices", len(new_devices))
-            self.hass.async_create_task(self._create_entities_for_devices())
+            # Pass the new devices to avoid creating entities for all devices
+            self.hass.async_create_task(self._create_entities_for_devices(new_devices))
 
         # Notify entity callbacks
         self._notify_entity_callbacks()
@@ -282,6 +286,11 @@ class SymiGatewayCoordinator(DataUpdateCoordinator):
         """Add entity creation callback."""
         self._entity_callbacks.append(callback)
 
+    def add_platform_callback(self, platform: str, callback: Callable) -> None:
+        """Add platform callback for dynamic entity creation."""
+        self._platform_callbacks[platform] = callback
+        _LOGGER.info("📋 Registered platform callback for %s", platform)
+
     def _notify_entity_callbacks(self) -> None:
         """Notify all entity callbacks."""
         for callback in self._entity_callbacks:
@@ -295,10 +304,19 @@ class SymiGatewayCoordinator(DataUpdateCoordinator):
         """Return if coordinator is available."""
         return self.is_connected and self.last_update_success
 
-    async def _create_entities_for_devices(self) -> None:
+    async def _create_entities_for_devices(self, new_devices: list[DeviceInfo] = None) -> None:
         """Create entities for discovered devices."""
         try:
-            _LOGGER.warning("🏭 Creating entities for discovered devices...")
+            if new_devices:
+                _LOGGER.warning("🏭 Creating entities for %d new devices...", len(new_devices))
+            else:
+                _LOGGER.warning("🏭 Creating entities for all discovered devices...")
+                new_devices = list(self.device_manager.devices.values())
+
+            # Create entities for each platform
+            await self._create_switch_entities(new_devices)
+            await self._create_light_entities(new_devices)
+            await self._create_binary_sensor_entities(new_devices)
 
             # Set updated data to trigger entity updates
             self.async_set_updated_data({
@@ -308,6 +326,76 @@ class SymiGatewayCoordinator(DataUpdateCoordinator):
 
         except Exception as err:
             _LOGGER.error("❌ Failed to create entities: %s", err)
+
+    async def _create_switch_entities(self, devices: list[DeviceInfo]) -> None:
+        """Create switch entities for discovered devices."""
+        if "switch" not in self._platform_callbacks:
+            _LOGGER.debug("Switch platform not ready yet")
+            return
+
+        # Filter devices that have switch capability
+        switch_devices = [d for d in devices if "switch" in d.capabilities]
+        if not switch_devices:
+            return
+
+        entities = []
+        for device in switch_devices:
+            if device.channels == 1:
+                # Single channel switch
+                from .switch import SymiSwitch
+                entities.append(SymiSwitch(self, device))
+            else:
+                # Multi-channel switch - create individual switches for each channel
+                for channel in range(1, device.channels + 1):
+                    from .switch import SymiSwitch
+                    entities.append(SymiSwitch(self, device, channel))
+
+        if entities:
+            self._platform_callbacks["switch"](entities)
+            _LOGGER.warning("🔌 Created %d switch entities", len(entities))
+
+    async def _create_light_entities(self, devices: list[DeviceInfo]) -> None:
+        """Create light entities for discovered devices."""
+        if "light" not in self._platform_callbacks:
+            _LOGGER.debug("Light platform not ready yet")
+            return
+
+        # Filter devices that have brightness capability
+        light_devices = [d for d in devices if "brightness" in d.capabilities]
+        if not light_devices:
+            return
+
+        entities = []
+        for device in light_devices:
+            from .light import SymiLight
+            entities.append(SymiLight(self, device))
+
+        if entities:
+            self._platform_callbacks["light"](entities)
+            _LOGGER.warning("💡 Created %d light entities", len(entities))
+
+    async def _create_binary_sensor_entities(self, devices: list[DeviceInfo]) -> None:
+        """Create binary sensor entities for discovered devices."""
+        if "binary_sensor" not in self._platform_callbacks:
+            _LOGGER.debug("Binary sensor platform not ready yet")
+            return
+
+        # Filter devices that have motion or door capabilities
+        motion_devices = [d for d in devices if "motion" in d.capabilities]
+        door_devices = [d for d in devices if "door" in d.capabilities]
+
+        entities = []
+        for device in motion_devices:
+            from .binary_sensor import SymiBinarySensor
+            entities.append(SymiBinarySensor(self, device, "motion"))
+
+        for device in door_devices:
+            from .binary_sensor import SymiBinarySensor
+            entities.append(SymiBinarySensor(self, device, "door"))
+
+        if entities:
+            self._platform_callbacks["binary_sensor"](entities)
+            _LOGGER.warning("🔍 Created %d binary sensor entities", len(entities))
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Update data."""
