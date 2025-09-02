@@ -1,5 +1,5 @@
 """Constants for the Symi Gateway integration."""
-from typing import Final
+from typing import Final, Any
 
 DOMAIN: Final = "symi_gateway"
 DEFAULT_NAME: Final = "Symi Gateway"
@@ -27,7 +27,6 @@ CONNECTION_TYPE_TCP: Final = "tcp"
 
 # Default values
 DEFAULT_BAUDRATE: Final = 115200  # 根据协议文档
-DEFAULT_TCP_PORT: Final = 4196  # 默认TCP端口
 DISCOVERY_PORT: Final = 4196  # 局域网发现端口
 DEFAULT_TIMEOUT: Final = 3.0
 DISCOVERY_TIMEOUT: Final = 5.0  # 发现超时时间
@@ -174,7 +173,7 @@ CURTAIN_CLOSE: Final = 0x02
 CURTAIN_STOP: Final = 0x03
 
 
-def get_gateway_device_info(entry_id: str) -> dict[str, str]:
+def get_gateway_device_info(entry_id: str) -> dict[str, Any]:
     """Get consistent gateway device info."""
     return {
         "identifiers": {(DOMAIN, entry_id)},

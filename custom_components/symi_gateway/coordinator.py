@@ -9,6 +9,7 @@ from typing import Any, Callable, Optional
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.helpers.storage import Store
 
 from .const import (
     DOMAIN,
@@ -27,6 +28,10 @@ from .protocol import ProtocolFrame, ProtocolHandler, build_read_device_list_fra
 from .device_manager import DeviceManager, DeviceInfo
 
 _LOGGER = logging.getLogger(__name__)
+
+# Storage version for device data
+STORAGE_VERSION = 1
+STORAGE_KEY = "symi_gateway_devices"
 
 
 class SymiGatewayCoordinator(DataUpdateCoordinator):
@@ -66,10 +71,16 @@ class SymiGatewayCoordinator(DataUpdateCoordinator):
         # Response handling
         self._pending_responses: dict[int, asyncio.Future] = {}
         self._response_timeout = DEFAULT_TIMEOUT
+        
+        # Storage for device persistence
+        self._store = Store(hass, STORAGE_VERSION, f"{STORAGE_KEY}_{entry.entry_id}")
 
     async def async_setup(self) -> bool:
         """Set up the coordinator."""
         try:
+            # Load previously saved devices
+            await self._load_device_data()
+            
             # Connect to gateway
             if not await self.tcp_comm.async_connect():
                 _LOGGER.error("❌ Failed to connect to gateway")
@@ -80,9 +91,8 @@ class SymiGatewayCoordinator(DataUpdateCoordinator):
             # Register frame callback
             self.tcp_comm.add_frame_callback(self._handle_frame)
 
-            # Read existing devices ONCE
-            if not self.discovered_devices:  # Only read if not already discovered
-                await self.async_read_device_list()
+            # Read current devices from gateway
+            await self.async_read_device_list()
 
             _LOGGER.info("✅ Coordinator setup completed")
             return True
@@ -93,6 +103,9 @@ class SymiGatewayCoordinator(DataUpdateCoordinator):
 
     async def async_shutdown(self) -> None:
         """Shutdown the coordinator."""
+        # Save device data before shutdown
+        await self._save_device_data()
+        
         self.is_connected = False
         await self.tcp_comm.async_disconnect()
         _LOGGER.info("🛑 Coordinator shutdown completed")
@@ -123,23 +136,39 @@ class SymiGatewayCoordinator(DataUpdateCoordinator):
         _LOGGER.info("📋 Parsing device list: %d bytes", len(frame.payload))
         devices = self._parse_device_list(frame.payload)
         
+        # Check for new devices (not in storage)
         new_devices = []
+        updated_devices = []
+        
         for device in devices:
-            if device.unique_id not in self.discovered_devices:
+            existing_device = self.discovered_devices.get(device.unique_id)
+            
+            if existing_device is None:
+                # Completely new device
                 self.discovered_devices[device.unique_id] = device
-                is_new = self.device_manager.add_device(device)
+                self.device_manager.add_device(device)
                 new_devices.append(device)
-                _LOGGER.warning("📱 NEW device discovered: %s (%s)", device.name, device.mac_address)
+                _LOGGER.warning("🆕 NEW device discovered: %s (%s)", device.name, device.mac_address)
             else:
-                _LOGGER.debug("📱 Device already known: %s", device.name)
+                # Update existing device info (network address, online status, etc.)
+                existing_device.network_address = device.network_address
+                existing_device.online = device.online
+                existing_device.last_seen = device.last_seen
+                updated_devices.append(existing_device)
+                _LOGGER.debug("🔄 Updated existing device: %s", device.name)
 
-        # Only trigger entity creation for new devices
+        # Save updated device data
+        if new_devices or updated_devices:
+            self.hass.async_create_task(self._save_device_data())
+
+        # Only trigger entity creation for genuinely new devices
         if new_devices:
             _LOGGER.warning("🔄 Triggering entity creation for %d NEW devices", len(new_devices))
-            # Pass the new devices to avoid creating entities for all devices
             self.hass.async_create_task(self._create_entities_for_devices(new_devices))
+        else:
+            _LOGGER.info("👍 All devices are already known, no new entities to create")
 
-        # Notify entity callbacks
+        # Notify entity callbacks for status updates
         self._notify_entity_callbacks()
 
     def _parse_device_list(self, payload: bytes) -> list[DeviceInfo]:
@@ -235,7 +264,10 @@ class SymiGatewayCoordinator(DataUpdateCoordinator):
 
             except Exception as err:
                 _LOGGER.error("❌ Failed to parse device at offset %d: %s", offset, err)
-                _LOGGER.error("  Device data: %s", device_data.hex().upper() if 'device_data' in locals() else "N/A")
+                # Get the actual device data if available
+                if offset + 16 <= len(payload):
+                    error_data = payload[offset:offset+16]
+                    _LOGGER.error("  Device data: %s", error_data.hex().upper())
                 break
 
         _LOGGER.warning("📋 Total parsed devices: %d", len(devices))
@@ -445,3 +477,33 @@ class SymiGatewayCoordinator(DataUpdateCoordinator):
         """Update data."""
         # This coordinator is event-driven, so we don't need to poll
         return {}
+
+    async def _load_device_data(self) -> None:
+        """Load device data from storage."""
+        try:
+            data = await self._store.async_load()
+            if data and "devices" in data:
+                _LOGGER.info("💾 Loading %d saved devices from storage", len(data["devices"]))
+                self.device_manager.from_dict(data["devices"])
+                
+                # Update discovered devices cache
+                for device in self.device_manager.get_all_devices():
+                    self.discovered_devices[device.unique_id] = device
+                    
+                _LOGGER.info("✅ Successfully loaded device data from storage")
+            else:
+                _LOGGER.info("🆕 No saved device data found, starting fresh")
+        except Exception as err:
+            _LOGGER.warning("⚠️ Failed to load device data: %s", err)
+
+    async def _save_device_data(self) -> None:
+        """Save device data to storage."""
+        try:
+            data = {
+                "devices": self.device_manager.to_dict(),
+                "timestamp": time.time(),
+            }
+            await self._store.async_save(data)
+            _LOGGER.debug("💾 Saved device data to storage")
+        except Exception as err:
+            _LOGGER.warning("⚠️ Failed to save device data: %s", err)
