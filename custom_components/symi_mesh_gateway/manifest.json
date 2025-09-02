@@ -1,5 +1,5 @@
 {
-  "domain": "symi_gateway",
+  "domain": "symi_mesh_gateway",
   "name": "亖米Mesh网关",
   "codeowners": ["@symi"],
   "config_flow": true,
@@ -9,8 +9,8 @@
   "iot_class": "local_polling",
   "platforms": ["switch", "light", "binary_sensor"],
   "issue_tracker": "https://github.com/symi/symi-gateway-ha/issues",
-  "requirements": ["pyserial>=3.5"],
-  "version": "5.2.0",
+  "requirements": [],
+  "version": "5.2.1",
   "homeassistant": "2025.1.0",
   "after_dependencies": [],
   "bluetooth": false,

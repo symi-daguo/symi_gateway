@@ -319,6 +319,14 @@ class DeviceManager:
         """Get all devices."""
         return list(self.devices.values())
 
+    def get_devices_by_capability(self, capability: str) -> list[DeviceInfo]:
+        """Get devices by capability."""
+        result = []
+        for device in self.devices.values():
+            if capability in device.capabilities:
+                result.append(device)
+        return result
+
     def remove_device(self, device_id: str) -> bool:
         """Remove a device."""
         if device_id in self.devices:
@@ -333,34 +341,27 @@ class DeviceManager:
         self.devices.clear()
         _LOGGER.info("🗑️ Cleared %d devices", count)
 
-    def update_device_state(self, network_address: int, msg_type: int, value: Any) -> Optional[DeviceInfo]:    
-        """Update device state by network address."""
-        device = self.get_device_by_address(network_address)
-        if device:
-            device.update_state(msg_type, value)
-            _LOGGER.debug("📊 Updated device state: %s, msg_type=0x%02X, value=%s",
-                         device.name, msg_type, value)
-            return device
-        return None
-
-    def get_devices_by_type(self, device_type: int) -> list[DeviceInfo]:
-        """Get devices by type."""
-        return [device for device in self.devices.values() if device.device_type == device_type]
-
-    def get_devices_by_capability(self, capability: str) -> list[DeviceInfo]:
-        """Get devices by capability."""
-        return [device for device in self.devices.values() if capability in device.capabilities]
-
     def to_dict(self) -> dict[str, Any]:
         """Convert all devices to dictionary for storage."""
-        return {device_id: device.to_dict() for device_id, device in self.devices.items()}
+        devices_dict = {}
+        for device_id, device in self.devices.items():
+            devices_dict[device_id] = device.to_dict()
+        return devices_dict
 
     def from_dict(self, data: dict[str, Any]) -> None:
         """Load devices from dictionary."""
         self.devices.clear()
         for device_id, device_data in data.items():
-            try:
-                device = DeviceInfo.from_dict(device_data)
-                self.devices[device_id] = device
-            except Exception as err:
-                _LOGGER.error("❌ Failed to load device %s: %s", device_id, err)
+            device = DeviceInfo.from_dict(device_data)
+            self.devices[device_id] = device
+
+    def update_device_state(self, network_address: int, msg_type: int, value: Any) -> Optional[DeviceInfo]:
+        """Update device state and return the device if found."""
+        device = self.get_device_by_address(network_address)
+        if device:
+            device.update_state(msg_type, value)
+            _LOGGER.debug("🔄 Updated device state: %s, msg_type=0x%02X, value=%s", device.name, msg_type, value)
+            return device
+        else:
+            _LOGGER.debug("⚠️ No device found with network address 0x%04X", network_address)
+            return None

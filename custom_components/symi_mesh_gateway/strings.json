@@ -1,0 +1,39 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "亖米Mesh网关配置",
+        "description": "请输入亖米Mesh网关的IP地址和端口",
+        "data": {
+          "host": "IP地址",
+          "port": "端口号"
+        },
+        "data_description": {
+          "host": "亖米Mesh网关的IP地址",
+          "port": "TCP端口号，默认为4196"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "无法连接到网关，请检查IP地址和端口是否正确",
+      "invalid_host": "无效的IP地址",
+      "unknown": "未知错误"
+    },
+    "abort": {
+      "already_configured": "该网关已经被配置",
+      "cannot_connect": "无法连接到网关"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "重新配置 亖米Mesh网关",
+        "description": "修改网关连接参数",
+        "data": {
+          "host": "IP地址",
+          "port": "端口号"
+        }
+      }
+    }
+  }
+}

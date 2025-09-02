@@ -1,7 +1,7 @@
 """Constants for the Symi Gateway integration."""
 from typing import Final, Any
 
-DOMAIN: Final = "symi_gateway"
+DOMAIN: Final = "symi_mesh_gateway"
 DEFAULT_NAME: Final = "Symi Gateway"
 
 # Platforms
@@ -171,6 +171,15 @@ SWITCH_6_ON: Final = 0x0E
 CURTAIN_OPEN: Final = 0x01
 CURTAIN_CLOSE: Final = 0x02
 CURTAIN_STOP: Final = 0x03
+
+# Vendor ID
+SYMI_VENDOR_ID: Final = 0x01A8  # 小端序存储
+
+# Group control address
+GROUP_CONTROL_ADDRESS: Final = 0xC0BC
+
+# Platforms
+PLATFORMS: Final = ["switch", "light", "binary_sensor"]
 
 
 def get_gateway_device_info(entry_id: str) -> dict[str, Any]:
